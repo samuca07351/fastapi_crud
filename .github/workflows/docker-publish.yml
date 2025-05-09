@@ -35,25 +35,6 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }} .
           # Envia (push) a imagem para o DockerHub
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
-
-  # Segundo job: deploy da imagem na máquina virtual remota
-  deploy-to-vm:
-    needs: build-and-push  # Garante que esse job só será executado após o "build-and-push"
-    runs-on: ubuntu-latest
-
-    steps:
-      # Configura a chave SSH para permitir o acesso à máquina remota
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
-
-      # Executa os comandos na máquina remota via SSH
-      - name: Deploy container on remote VM
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << EOF
-            # Baixa a imagem mais recente da aplicação
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
             # Para o container atual, se existir
             docker stop fastapi-crud || true
             # Remove o container atual, se existir
