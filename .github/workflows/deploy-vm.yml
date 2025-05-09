@@ -1,3 +1,47 @@
+name: Build and Deploy Docker Image
+
+on:
+  push:
+    tags:
+      - '*'             # Executa quando uma tag for enviada
+    branches:
+      - main            # (opcional) também roda em pushes na main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    outputs:
+      TAG: ${{ steps.docker_tag.outputs.TAG }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker tag
+        id: docker_tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="${GITHUB_SHA::7}"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ steps.docker_tag.outputs.TAG }} .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ steps.docker_tag.outputs.TAG }}
+
   deploy-to-vm:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -14,5 +58,5 @@
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ needs.build-and-push.outputs.TAG }}
             docker stop fastapi-crud || true
             docker rm fastapi-crud || true
-            docker run -d --name fastapi-crud -p 8000:80000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ needs.build-and-push.outputs.TAG }}
+            docker run -d --name fastapi-crud -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ needs.build-and-push.outputs.TAG }}
           EOF
