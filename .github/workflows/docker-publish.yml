@@ -1,47 +1,63 @@
+# Nome do workflow que aparecerá na aba Actions do GitHub
 name: Build, Push, and Deploy Docker Image
 
+# Define o gatilho: esse workflow será executado quando houver um push na branch "main"
 on:
   push:
     branches:
       - main
 
 jobs:
+  # Primeiro job: build da imagem e push para o DockerHub
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Define o sistema operacional da máquina que executa o job
 
     steps:
+      # Clona o repositório no ambiente de execução (runner)
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      # Configura o Docker Buildx (recurso avançado de build do Docker)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Faz login no DockerHub com usuário e token armazenados em secrets
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Constrói a imagem Docker e faz o push para o DockerHub
       - name: Build and push Docker image
         run: |
+          # Constrói a imagem com a tag do commit atual (github.sha)
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }} .
+          # Envia (push) a imagem para o DockerHub
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
 
+  # Segundo job: deploy da imagem na máquina virtual remota
   deploy-to-vm:
-    needs: build-and-push  # Aqui você garante que esse job só será executado após o build e push
+    needs: build-and-push  # Garante que esse job só será executado após o "build-and-push"
     runs-on: ubuntu-latest
 
     steps:
+      # Configura a chave SSH para permitir o acesso à máquina remota
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
 
+      # Executa os comandos na máquina remota via SSH
       - name: Deploy container on remote VM
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << EOF
+            # Baixa a imagem mais recente da aplicação
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
+            # Para o container atual, se existir
             docker stop fastapi-crud || true
+            # Remove o container atual, se existir
             docker rm fastapi-crud || true
+            # Sobe um novo container na porta 8000
             docker run -d --name fastapi-crud -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
           EOF
