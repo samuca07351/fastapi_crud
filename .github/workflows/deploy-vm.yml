@@ -1,11 +1,7 @@
 name: Build and Deploy Docker Image
 
-on:
-  push:
-    tags:
-      - '*'             # Executa quando uma tag for enviada
-    branches:
-      - main            # (opcional) também roda em pushes na main
+on: workflow_dispatch  # Executa apenas manualmente, não em push
+
 
 jobs:
   build-and-push:

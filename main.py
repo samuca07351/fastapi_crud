@@ -7,7 +7,7 @@ from prometheus_fastapi_instrumentator import (
     metrics,
 )
 
-app = FastAPI(title='Curso FastAPI - seminarios')
+app = FastAPI(title='Curso FastAPI - seminarios Docker')
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
