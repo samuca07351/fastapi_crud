@@ -35,10 +35,3 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }} .
           # Envia (push) a imagem para o DockerHub
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
-            # Para o container atual, se existir
-            docker stop fastapi-crud || true
-            # Remove o container atual, se existir
-            docker rm fastapi-crud || true
-            # Sobe um novo container na porta 8000
-            docker run -d --name fastapi-crud -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-crud:${{ github.sha }}
-          EOF
